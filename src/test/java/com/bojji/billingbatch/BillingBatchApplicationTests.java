@@ -21,13 +21,17 @@ class BillingBatchApplicationTests {
     @Test
     void testJobExecution(CapturedOutput output) throws Exception {
         // given
-        JobParameters jobParameters = new JobParameters();
+        String inputFile = "/some/input/file";
+        JobParameters jobParameters = new JobParametersBuilder()
+                .addString("input.file", inputFile)
+                .addString("file.format", "csv", false)
+                .toJobParameters();
 
         // when
         JobExecution jobExecution = this.jobLauncher.run(this.job, jobParameters);
 
         // then
-        Assertions.assertTrue(output.getOut().contains("processing billing information"));
+        Assertions.assertTrue(output.getOut().contains("processing billing information from file " + inputFile));
         Assertions.assertEquals(ExitStatus.COMPLETED, jobExecution.getExitStatus());
     }
 }
