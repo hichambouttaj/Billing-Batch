@@ -2,21 +2,20 @@ package com.bojji.billingbatch.processor;
 
 import com.bojji.billingbatch.domain.BillingData;
 import com.bojji.billingbatch.domain.ReportingData;
+import com.bojji.billingbatch.service.PricingService;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 
 public class BillingDataProcessor implements ItemProcessor<BillingData, ReportingData> {
-    @Value("${spring.cellular.pricing.data:0.01}")
-    private float dataPricing;
-    @Value("${spring.cellular.pricing.call:0.5}")
-    private float callPricing;
-    @Value("${spring.cellular.pricing.sms:0.1}")
-    private float smsPricing;
     @Value("${spring.cellular.spending.threshold:150}")
     private float spendingThreshold;
+    private final PricingService pricingService;
+    public BillingDataProcessor(PricingService pricingService) {
+        this.pricingService = pricingService;
+    }
     @Override
     public ReportingData process(BillingData billingData) throws Exception {
-        double billingTotal = billingData.dataUsage() * dataPricing + billingData.callDuration() * callPricing + billingData.smsCount() * smsPricing;
+        double billingTotal = billingData.dataUsage() * pricingService.getDataPricing() + billingData.callDuration() * pricingService.getCallPricing() + billingData.smsCount() * pricingService.getSmsPricing();
 
         if(billingTotal < spendingThreshold)
             return null;

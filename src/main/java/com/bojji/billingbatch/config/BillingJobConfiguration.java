@@ -2,8 +2,10 @@ package com.bojji.billingbatch.config;
 
 import com.bojji.billingbatch.domain.BillingData;
 import com.bojji.billingbatch.domain.ReportingData;
+import com.bojji.billingbatch.exception.PricingException;
 import com.bojji.billingbatch.listener.BillingDataSkipListener;
 import com.bojji.billingbatch.processor.BillingDataProcessor;
+import com.bojji.billingbatch.service.PricingService;
 import com.bojji.billingbatch.step.FilePreparationTasklet;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -80,6 +82,9 @@ public class BillingJobConfiguration {
                 .reader(billingDataTableReader)
                 .processor(billingDataProcessor)
                 .writer(billingDataFileWriter)
+                .faultTolerant()
+                .retry(PricingException.class)
+                .retryLimit(100)
                 .build();
     }
     @Bean("billingDataFileReader")
@@ -125,8 +130,8 @@ public class BillingJobConfiguration {
                 .build();
     }
     @Bean
-    public BillingDataProcessor billingDataProcessor() {
-        return new BillingDataProcessor();
+    public BillingDataProcessor billingDataProcessor(PricingService pricingService) {
+        return new BillingDataProcessor(pricingService);
     }
     @Bean
     @StepScope
@@ -146,5 +151,9 @@ public class BillingJobConfiguration {
             @Value("#{jobParameters['skip.file']}") String skippedFile
     ) {
         return new BillingDataSkipListener(skippedFile);
+    }
+    @Bean
+    public PricingService pricingService() {
+        return new PricingService();
     }
 }
