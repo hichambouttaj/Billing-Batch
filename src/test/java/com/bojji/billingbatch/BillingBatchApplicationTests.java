@@ -37,9 +37,11 @@ class BillingBatchApplicationTests {
     @Test
     void testJobExecution() throws Exception {
         // given
-        String inputFile = "src/main/resources/billing-2023-01.csv";
         JobParameters jobParameters = new JobParametersBuilder()
-                .addString("input.file", inputFile)
+                .addString("input.file", "input/billing-2023-01.csv")
+                .addString("output.file", "staging/billing-report-2023-01.csv")
+                .addJobParameter("data.year", 2023, Integer.class)
+                .addJobParameter("data.month", 1, Integer.class)
                 .toJobParameters();
 
         // when
