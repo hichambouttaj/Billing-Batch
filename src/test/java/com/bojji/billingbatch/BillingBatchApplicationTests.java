@@ -13,34 +13,46 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.jdbc.JdbcTestUtils;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @SpringBatchTest
 @SpringBootTest
-@ExtendWith(OutputCaptureExtension.class)
 class BillingBatchApplicationTests {
     @Autowired
     private JobLauncherTestUtils jobLauncherTestUtils;
     @Autowired
     private JobRepositoryTestUtils jobRepositoryTestUtils;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
     @BeforeEach
     void setUp() {
         this.jobRepositoryTestUtils.removeJobExecutions();
+        JdbcTestUtils.deleteFromTables(this.jdbcTemplate, "billing_data");
     }
     @Test
-    void testJobExecution(CapturedOutput output) throws Exception {
+    void testJobExecution() throws Exception {
         // given
-        String inputFile = "/some/input/file";
-        JobParameters jobParameters = this.jobLauncherTestUtils
-                .getUniqueJobParametersBuilder()
+        String inputFile = "src/main/resources/billing-2023-01.csv";
+        JobParameters jobParameters = new JobParametersBuilder()
                 .addString("input.file", inputFile)
-                .addString("file.format", "csv", false)
                 .toJobParameters();
 
         // when
         JobExecution jobExecution = this.jobLauncherTestUtils.launchJob(jobParameters);
 
         // then
-        Assertions.assertTrue(output.getOut().contains("processing billing information from file " + inputFile));
         Assertions.assertEquals(ExitStatus.COMPLETED, jobExecution.getExitStatus());
+        Assertions.assertTrue(Files.exists(Paths.get("staging", "billing-2023-01-csv")));
+        Assertions.assertEquals(1000, JdbcTestUtils.countRowsInTable(jdbcTemplate, "billing_data"));
+
+        Path billingReport = Paths.get("staging", "billing-report-2023-01.csv");
+        Assertions.assertTrue(Files.exists(billingReport));
+        Assertions.assertEquals(781, Files.lines(billingReport).count());
+
     }
 }
